@@ -21,25 +21,32 @@ async function fetchCartData(id) {
     return data;
 }
 
+function formatDateTime(datetime) {
+    const [date, time] = datetime.split(" "); // Split date and time
+    const [day, month, year] = date.split("-"); // Split into day, month, year
+    return `${year}-${month}-${day} ${time}`; // Convert to YYYY-MM-DD HH:MM:SS
+}
+
 async function insertCartData(cartData) {
-    try {
-        const order_id = generateOrderId();
+    cartData.datetime = formatDateTime(cartData.datetime); // Fix datetime format
 
-        const { data, error } = await supabase
-            .from("cart_details")
-            .insert([{ ...cartData, order_id }])
-            .select();
+    const orderId = generateOrderId();
 
-        if (error) {
-            console.error("❌ Error inserting data:", error);
-            return null;
-        }
+    const { data, error } = await supabase
+        .from("cart_details")
+        .insert([
+            {
+                order_id: orderId,
+                items: cartData.items,  // Store as JSONB (without stringify)
+                total: cartData.total,
+                datetime: cartData.datetime
+            }
+        ]);
 
+    if (error) {
+        console.error("❌ Error inserting data:", error);
+    } else {
         console.log("✅ Data inserted successfully:", data);
-        return data;
-    } catch (err) {
-        console.error("❌ Unexpected error inserting data:", err.message);
-        return null;
     }
 }
 

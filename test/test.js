@@ -6,16 +6,28 @@ const encryptedString = "HRl+F+9lNXYI2FlFRDdKFsxFKWwHyl+0jmxfQAhs+3uG9ZiMT9r5rjt
 
 function parseCartDetails(text) {
     try {
-        const lines = text.split("\n").map(line => line.trim());
-        if (lines.length < 5) throw new Error("Invalid format");
+        const lines = text.split("\n").map(line => line.trim()); // Split and clean lines
 
-        return {
-            item: lines[1].split(" - Rs. ")[0],
-            price: parseFloat(lines[1].split(" - Rs. ")[1]),
-            quantity: parseInt(lines[2].split("- ")[1]),
-            total: parseFloat(lines[3].split(": Rs. ")[1]),
-            datetime: lines[4].split("Date & Time:")[1].trim(),
-        };
+        if (lines.length < 2) throw new Error("Invalid format");
+
+        let items = [];
+        let total = 0;
+        let datetime = "";
+
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].startsWith("Total:")) {
+                total = parseFloat(lines[i].split(": Rs. ")[1]);
+            } else if (lines[i].startsWith("Date & Time:")) {
+                datetime = lines[i].split("Date & Time:")[1].trim();
+            } else if (lines[i].includes("- Rs.")) {
+                // Extract item name and price
+                let [item, price] = lines[i].split(" - Rs. ");
+                let quantity = parseInt(lines[i + 1]?.split("- ")[1]); // Get next line's quantity
+                items.push({ item, price: parseFloat(price), quantity });
+            }
+        }
+
+        return { items, total, datetime };
     } catch (error) {
         console.error("❌ Failed to parse cart details:", error.message);
         return null;
