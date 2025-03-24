@@ -3,7 +3,7 @@ const router = express.Router();
 const { fetchCartData } = require("../controllers/cartController");
 
 // // 🛒 Fetch All Cart Items
-router.get("/:id", async (req, res) => {
+router.post("/:id", async (req, res) => {
     const { id } = req.params; // ✅ Get ID from URL
 
     if (!id) return res.status(400).json({ error: "Cart ID is required" });

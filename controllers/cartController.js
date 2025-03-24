@@ -7,11 +7,11 @@ function generateOrderId() {
 }
 
 // Function to fetch cart data
-async function fetchCartData(id) {
+async function fetchCartData(orderId) {
     const { data, error } = await supabase
         .from("cart_details")
         .select("*")
-        .eq("id", id) // ✅ Filter by ID
+        .eq("order_id", orderId) // ✅ Filter by ID
 
     if (error) {
         console.error("❌ Error fetching cart data:", error.message);
