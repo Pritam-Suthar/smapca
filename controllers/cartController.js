@@ -1,53 +1,84 @@
-const supabase = require("../config/supabase");
-const crypto = require("crypto");
+const { qrScan } = require("../utils/qrScanner");
+const supabase = require("../utils/supabaseClient");
 
-// Function to generate a random order ID
-function generateOrderId() {
-    return "order_" + crypto.randomBytes(8).toString("base64url"); // ✅ Generates a short alphanumeric ID
-}
+// Function to parse decrypted QR data
+function parseCartDetails(text) {
+    try {
+        const lines = text.split("\n").map(line => line.trim());
 
-// Function to fetch cart data
-async function fetchCartData(orderId) {
-    const { data, error } = await supabase
-        .from("cart_details")
-        .select("*")
-        .eq("order_id", orderId) // ✅ Filter by ID
+        if (lines.length < 2) throw new Error("Invalid format");
 
-    if (error) {
-        console.error("❌ Error fetching cart data:", error.message);
+        let items = [];
+        let total = 0;
+        let datetime = "";
+
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].startsWith("Total:")) {
+                total = parseFloat(lines[i].split(": Rs. ")[1]);
+            } else if (lines[i].startsWith("Date & Time:")) {
+                datetime = lines[i].split("Date & Time:")[1].trim();
+            } else if (lines[i].includes("- Rs.")) {
+                let [item, price] = lines[i].split(" - Rs. ");
+                let quantity = parseInt(lines[i + 1]?.split("- ")[1]); // Get next line's quantity
+                items.push({ item, price: parseFloat(price), quantity });
+            }
+        }
+
+        return { items, total, datetime };
+    } catch (error) {
+        console.error("❌ Failed to parse cart details:", error.message);
         return null;
     }
-
-    return data;
 }
 
-function formatDateTime(datetime) {
-    const [date, time] = datetime.split(" "); // Split date and time
-    const [day, month, year] = date.split("-"); // Split into day, month, year
-    return `${year}-${month}-${day} ${time}`; // Convert to YYYY-MM-DD HH:MM:SS
-}
+// Function to handle the QR scanning and saving process
+async function scanAndSaveCart(req, res) {
+    const { trolly_id, encrypted_string } = req.body;
 
-async function insertCartData(cartData) {
-    cartData.datetime = formatDateTime(cartData.datetime); // Fix datetime format
+    if (!trolly_id || !encrypted_string) {
+        return res.status(400).json({ error: "Missing trolly_id or encrypted_string" });
+    }
 
-    const orderId = generateOrderId();
+    try {
+        // 🔓 Decrypt QR Code Data
+        const decryptedData = await qrScan(encrypted_string);
+        if (!decryptedData) {
+            return res.status(400).json({ error: "Decryption failed" });
+        }
 
-    const { data, error } = await supabase
-        .from("cart_details")
-        .insert([
+        // 🛒 Parse the decrypted cart details
+        const cartData = parseCartDetails(decryptedData);
+        if (!cartData) {
+            return res.status(400).json({ error: "Failed to extract cart details" });
+        }
+
+        // ✅ Insert into Supabase
+        const { data, error } = await supabase.from("cart").insert([
             {
-                order_id: orderId,
-                items: cartData.items,  // Store as JSONB (without stringify)
+                trolly_id,
+                items: cartData.items,
                 total: cartData.total,
-                datetime: cartData.datetime
-            }
+                datetime: cartData.datetime,
+            },
         ]);
 
-    if (error) {
-        console.error("❌ Error inserting data:", error);
-    } else {
-        console.log("✅ Data inserted successfully:", data);
+        if (error) {
+            console.error("❌ Supabase Insert Error:", error.message);
+            return res.status(500).json({ error: "Failed to store data in Supabase" });
+        }
+
+        // ✅ Mock database insert
+        console.log("✅ Saving to database:", { trolly_id, ...cartData });
+
+        return res.status(200).json({
+            success: true,
+            message: "Cart data saved successfully",
+            cartData,
+        });
+    } catch (error) {
+        console.error("❌ Error processing cart data:", error.message);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 }
 
-module.exports = { fetchCartData, insertCartData };
+module.exports = { scanAndSaveCart };
