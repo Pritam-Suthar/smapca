@@ -1,11 +1,11 @@
 const { qrScan } = require("../utils/qrScanner");
 const supabase = require("../utils/supabaseClient");
+const crypto = require("crypto");
 
 // Function to parse decrypted QR data
 function parseCartDetails(text) {
     try {
         const lines = text.split("\n").map(line => line.trim());
-
         if (lines.length < 2) throw new Error("Invalid format");
 
         let items = [];
@@ -52,12 +52,17 @@ async function scanAndSaveCart(req, res) {
             return res.status(400).json({ error: "Failed to extract cart details" });
         }
 
+        // 🛒 Generate Order ID (e.g., order_<hex>)
+        const order_id = "order_" + crypto.randomBytes(6).toString("hex");
+
         // ✅ Insert into Supabase
         const { data, error } = await supabase.from("cart").insert([
             {
                 trolly_id,
+                order_id,
                 items: cartData.items,
                 total: cartData.total,
+                payment_status: "pending",
                 datetime: cartData.datetime,
             },
         ]);
@@ -73,6 +78,7 @@ async function scanAndSaveCart(req, res) {
         return res.status(200).json({
             success: true,
             message: "Cart data saved successfully",
+            order_id,
             cartData,
         });
     } catch (error) {
