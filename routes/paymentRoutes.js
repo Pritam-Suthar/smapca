@@ -1,7 +1,6 @@
 const express = require("express");
-const { updatePaymentStatus } = require("../controllers/paymentController");
-
 const router = express.Router();
+const { updatePaymentStatus } = require("../controllers/paymentController");
 
 // ✅ Route to update payment status
 router.post("/update-payment-status", updatePaymentStatus);

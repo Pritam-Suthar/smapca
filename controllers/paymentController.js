@@ -1,39 +1,31 @@
 const supabase = require("../utils/supabaseClient");
 
-// ✅ Function to update payment status immediately
 async function updatePaymentStatus(req, res) {
-    const { order_id, payment_id } = req.body;
+    console.log("🔍 Received request:", req.body); // ✅ Debugging log
 
-    if (!order_id || !payment_id) {
+    const { order_id, razorpay_payment_id } = req.body;
+
+    if (!order_id || !razorpay_payment_id) {
         return res.status(400).json({ error: "Missing order_id or payment_id" });
     }
 
-    try {
-        // 🔄 Update payment status in Supabase
-        const { data, error } = await supabase
-            .from("cart")
-            .update({ 
-                payment_status: "paid",  // ✅ Mark as Paid
-                payment_id      // ✅ Store payment ID for reference
-            })
-            .eq("order_id", order_id);
+    // ✅ Update payment status in Supabase
+    const { data, error } = await supabase
+        .from("cart")
+        .update({ payment_status: "success", razorpay_payment_id })
+        .eq("order_id", order_id);
 
-        if (error) {
-            console.error("❌ Supabase Update Error:", error.message);
-            return res.status(500).json({ error: "Failed to update payment status" });
-        }
-
-        console.log(`✅ Payment successful for Order ID: ${order_id}`);
-        return res.status(200).json({
-            success: true,
-            message: "Payment status updated",
-            order_id,
-            payment_id
-        });
-    } catch (error) {
-        console.error("❌ Error updating payment status:", error.message);
-        return res.status(500).json({ error: "Internal Server Error" });
+    if (error) {
+        console.error("❌ Supabase Update Error:", error.message);
+        return res.status(500).json({ error: error.message });
     }
+
+    res.status(200).json({
+        success: true,
+        message: "Payment status updated",
+        order_id,
+        razorpay_payment_id
+    });
 }
 
 module.exports = { updatePaymentStatus };
