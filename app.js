@@ -1,6 +1,7 @@
 require("dotenv").config(); // Load environment variables
 const express = require("express");
 const cartRoutes = require("./routes/cartRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
