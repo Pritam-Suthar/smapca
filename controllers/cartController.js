@@ -88,26 +88,36 @@ async function scanAndSaveCart(req, res) {
     }
 }
 
-// Fetch user cart history
+// Fetch user cart history dynamically
 async function fetchUserCartHistory(req, res) {
-    const { user_id } = req.params;
+    try {
+        // Extract the authenticated user from request
+        const user = req.user; // This should be set by authentication middleware
 
-    if (!user_id) {
-        return res.status(400).json({ error: "Missing user_id" });
+        if (!user || !user.id) {
+            return res.status(401).json({ error: "Unauthorized, user not found" });
+        }
+
+        // Get user ID dynamically
+        const user_id = user.id;
+
+        // Fetch cart history from Supabase
+        const { data, error } = await supabase
+            .from("cart")
+            .select("*")
+            .eq("user_id", user_id);
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        return res.status(200).json({ success: true, history: data });
+    } catch (error) {
+        console.error("❌ Error fetching user cart history:", error.message);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
-
-    const { data, error } = await supabase
-        .from("cart")
-        .select("*")
-        .eq("user_id", user_id);
-
-    if (error) {
-        console.error("❌ Supabase Fetch Error:", error.message);
-        return res.status(500).json({ error: "Failed to fetch user history" });
-    }
-
-    res.status(200).json({ success: true, history: data });
 }
+
 
 // Function to update payment status
 async function updatePaymentStatus(req, res) {
