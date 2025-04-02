@@ -109,4 +109,34 @@ async function fetchUserCartHistory(req, res) {
     res.status(200).json({ success: true, history: data });
 }
 
-module.exports = { scanAndSaveCart, fetchUserCartHistory };
+// Function to update payment status
+async function updatePaymentStatus(req, res) {
+    const { order_id, status } = req.body;
+
+    if (!order_id || !status) {
+        return res.status(400).json({ error: "Missing order_id or status" });
+    }
+
+    try {
+        // ✅ Update payment status in Supabase
+        const { data, error } = await supabase
+            .from("cart")
+            .update({ payment_status: status })
+            .eq("order_id", order_id);
+
+        if (error) {
+            console.error("❌ Supabase Update Error:", error.message);
+            return res.status(500).json({ error: "Failed to update payment status" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Payment status updated to '${status}'`,
+        });
+    } catch (error) {
+        console.error("❌ Error updating payment status:", error.message);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+module.exports = { scanAndSaveCart, fetchUserCartHistory, updatePaymentStatus };
