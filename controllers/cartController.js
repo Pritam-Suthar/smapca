@@ -31,12 +31,12 @@ function parseCartDetails(text) {
     }
 }
 
-// Function to handle the QR scanning and saving process
+// Function to handle QR scanning and saving process
 async function scanAndSaveCart(req, res) {
-    const { trolly_id, encrypted_string } = req.body;
+    const { trolly_id, encrypted_string, user_id } = req.body;
 
-    if (!trolly_id || !encrypted_string) {
-        return res.status(400).json({ error: "Missing trolly_id or encrypted_string" });
+    if (!trolly_id || !encrypted_string || !user_id) {
+        return res.status(400).json({ error: "Missing trolly_id, user_id, or encrypted_string" });
     }
 
     try {
@@ -59,6 +59,7 @@ async function scanAndSaveCart(req, res) {
         const { data, error } = await supabase.from("cart").insert([
             {
                 trolly_id,
+                user_id, // ✅ Store user_id
                 order_id,
                 items: cartData.items,
                 total: cartData.total,
@@ -72,8 +73,8 @@ async function scanAndSaveCart(req, res) {
             return res.status(500).json({ error: "Failed to store data in Supabase" });
         }
 
-        // ✅ Mock database insert
-        console.log("✅ Saving to database:", { trolly_id, ...cartData });
+        // ✅ Log database insert
+        console.log("✅ Cart saved:", { trolly_id, user_id, order_id, ...cartData });
 
         return res.status(200).json({
             success: true,
@@ -87,4 +88,25 @@ async function scanAndSaveCart(req, res) {
     }
 }
 
-module.exports = { scanAndSaveCart };
+// Fetch user cart history
+async function fetchUserCartHistory(req, res) {
+    const { user_id } = req.params;
+
+    if (!user_id) {
+        return res.status(400).json({ error: "Missing user_id" });
+    }
+
+    const { data, error } = await supabase
+        .from("cart")
+        .select("*")
+        .eq("user_id", user_id);
+
+    if (error) {
+        console.error("❌ Supabase Fetch Error:", error.message);
+        return res.status(500).json({ error: "Failed to fetch user history" });
+    }
+
+    res.status(200).json({ success: true, history: data });
+}
+
+module.exports = { scanAndSaveCart, fetchUserCartHistory };
