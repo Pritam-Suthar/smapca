@@ -63,7 +63,8 @@ async function scanAndSaveCart(req, res) {
                 order_id,
                 items: cartData.items,
                 total: cartData.total,
-                payment_status: "pending",
+                payment_status: "pending", // ✅ Default is "pending"
+                payment_id: null, // ✅ Payment ID will be updated later
                 datetime: cartData.datetime,
             },
         ]);
@@ -79,13 +80,45 @@ async function scanAndSaveCart(req, res) {
         return res.status(200).json({
             success: true,
             message: "Cart data saved successfully",
-            order_id,
+            order_id, // ✅ Return order ID so frontend can send payment ID later
             cartData,
         });
     } catch (error) {
         console.error("❌ Error processing cart data:", error.message);
         return res.status(500).json({ error: "Internal Server Error" });
     }
+}
+
+// ✅ Function to update payment status in Supabase
+async function updatePaymentStatus(req, res) {
+    console.log("🔍 Received request:", req.body); // Debugging log
+
+    const { order_id, payment_id } = req.body;
+
+    if (!order_id || !payment_id) {
+        return res.status(400).json({ error: "Missing order_id or payment_id" });
+    }
+
+    // ✅ Update payment status & store payment ID in Supabase
+    const { data, error } = await supabase
+        .from("cart")
+        .update({
+            payment_status: "success",
+            payment_id: payment_id // ✅ Storing payment ID
+        })
+        .eq("order_id", order_id);
+
+    if (error) {
+        console.error("❌ Supabase Update Error:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Payment status updated successfully",
+        order_id,
+        payment_id
+    });
 }
 
 // Fetch user cart history dynamically
@@ -114,37 +147,6 @@ async function fetchUserCartHistory(req, res) {
         return res.status(200).json({ success: true, history: data });
     } catch (error) {
         console.error("❌ Error fetching user cart history:", error.message);
-        return res.status(500).json({ error: "Internal Server Error" });
-    }
-}
-
-
-// Function to update payment status
-async function updatePaymentStatus(req, res) {
-    const { order_id, status } = req.body;
-
-    if (!order_id || !status) {
-        return res.status(400).json({ error: "Missing order_id or status" });
-    }
-
-    try {
-        // ✅ Update payment status in Supabase
-        const { data, error } = await supabase
-            .from("cart")
-            .update({ payment_status: status })
-            .eq("order_id", order_id);
-
-        if (error) {
-            console.error("❌ Supabase Update Error:", error.message);
-            return res.status(500).json({ error: "Failed to update payment status" });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: `Payment status updated to '${status}'`,
-        });
-    } catch (error) {
-        console.error("❌ Error updating payment status:", error.message);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 }
