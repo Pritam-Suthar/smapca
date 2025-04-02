@@ -64,7 +64,7 @@ async function scanAndSaveCart(req, res) {
                 items: cartData.items,
                 total: cartData.total,
                 payment_status: "pending", // ✅ Default is "pending"
-                payment_id: null, // ✅ Payment ID will be updated later
+                paymentId: null, // ✅ Payment ID will be updated later
                 datetime: cartData.datetime,
             },
         ]);
@@ -93,9 +93,9 @@ async function scanAndSaveCart(req, res) {
 async function updatePaymentStatus(req, res) {
     console.log("🔍 Received request:", req.body); // Debugging log
 
-    const { order_id, payment_id } = req.body;
+    const { order_id, paymentId } = req.body;
 
-    if (!order_id || !payment_id) {
+    if (!order_id || !paymentId) {
         return res.status(400).json({ error: "Missing order_id or payment_id" });
     }
 
@@ -104,7 +104,7 @@ async function updatePaymentStatus(req, res) {
         .from("cart")
         .update({
             payment_status: "success",
-            payment_id: payment_id // ✅ Storing payment ID
+            paymentId: paymentId // ✅ Storing payment ID
         })
         .eq("order_id", order_id);
 
@@ -117,7 +117,7 @@ async function updatePaymentStatus(req, res) {
         success: true,
         message: "Payment status updated successfully",
         order_id,
-        payment_id
+        paymentId
     });
 }
 
