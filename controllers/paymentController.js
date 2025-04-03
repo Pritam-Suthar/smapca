@@ -6,25 +6,46 @@ async function updatePaymentStatus(req, res) {
     const { order_id, paymentId } = req.body;
 
     if (!order_id || !paymentId) {
+        console.error("❌ Missing parameters in request");
         return res.status(400).json({ error: "Missing order_id or payment_id" });
     }
 
-    // ✅ Update payment status in Supabase
+    // ✅ Fetch existing data before update
+    const { data: existingData, error: fetchError } = await supabase
+        .from("cart")
+        .select("*")
+        .eq("order_id", order_id);
+
+    console.log("📌 Existing cart data:", existingData);
+
+    if (fetchError) {
+        console.error("❌ Error fetching existing cart:", fetchError.message);
+        return res.status(500).json({ error: fetchError.message });
+    }
+
+    // ✅ Update payment status
     const { data, error } = await supabase
         .from("cart")
-        .update({ payment_status: "success", paymentId })
-        .eq("order_id", order_id);
+        .update({
+            payment_status: "success",
+            razorpay_payment_id: paymentId
+        })
+        .eq("order_id", order_id)
+        .select();
 
     if (error) {
         console.error("❌ Supabase Update Error:", error.message);
         return res.status(500).json({ error: error.message });
     }
 
+    console.log("✅ Updated payment in Supabase:", data); // ✅ Log updated record
+
     res.status(200).json({
         success: true,
-        message: "Payment status updated",
+        message: "Payment status updated successfully",
         order_id,
-        paymentId
+        paymentId,
+        updated_data: data
     });
 }
 
