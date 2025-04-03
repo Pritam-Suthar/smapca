@@ -28,7 +28,7 @@ async function updatePaymentStatus(req, res) {
         .from("cart")
         .update({
             payment_status: "success",
-            razorpay_payment_id: paymentId
+            paymentId: paymentId
         })
         .eq("order_id", order_id)
         .select();
