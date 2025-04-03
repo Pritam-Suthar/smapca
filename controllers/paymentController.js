@@ -1,12 +1,12 @@
 const supabase = require("../utils/supabaseClient");
 
 async function updatePaymentStatus(req, res) {
-    console.log("🔍 Received request:", req.body); // ✅ Debugging log
+    console.log("🔍 Full Request Body:", req.body); // ✅ Log full request
 
     const { order_id, paymentId } = req.body;
 
     if (!order_id || !paymentId) {
-        console.error("❌ Missing parameters in request");
+        console.error("❌ Missing parameters in request:", { order_id, paymentId });
         return res.status(400).json({ error: "Missing order_id or payment_id" });
     }
 
@@ -28,7 +28,7 @@ async function updatePaymentStatus(req, res) {
         .from("cart")
         .update({
             payment_status: "success",
-            paymentId: paymentId
+            payment_id: paymentId // 🛑 Ensure column name matches DB
         })
         .eq("order_id", order_id)
         .select();
